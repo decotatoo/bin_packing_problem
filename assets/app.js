@@ -125,19 +125,20 @@ function simulationResultVisualization() {
     console.log(packed);
 
     results.packed.forEach((packed, index) => {
-        const master = packed.box;
-        const pos = createMasterObject(master);
+        const pos = createMasterObject(packed);
         const items = packed.items;
 
         items.forEach(unit => {
             createUnitObject(unit, pos);
         });
 
-        master_row_x += (master.outer_length + 100);
+        master_row_x += (packed.box.outer_length + 100);
     });
 }
 
-function createMasterObject(master) {
+function createMasterObject(item) {
+    const master = item.box;
+
     const outer_trans_x = master.outer_width / 2;
     const outer_trans_y = master.outer_length / 2;
     const outer_trans_z = master.outer_depth / 2;
@@ -168,7 +169,7 @@ function createMasterObject(master) {
     const text_geo = new TextGeometry(master.reference, {
         font: font,
         size: 30,
-        height: 1,
+        height: 2,
         curveSegments: 4,
         bevelThickness: 2,
         bevelSize: 1,
@@ -187,9 +188,32 @@ function createMasterObject(master) {
 
     text_mesh.castShadow = true;
     text_mesh.receiveShadow = true;
-    
+
     text_mesh.tooltip = true;
-    text_mesh.tooltipType = 'master';
+    text_mesh.tooltipType = 'master-signage';
+
+    let master_contents = [];
+
+    item.items.forEach((x) => {
+        if (
+            master_contents.some(
+                (val) => val.id == x.id
+            )
+        ) {
+            master_contents.forEach((k) => {
+                if (k.id === x.id) {
+                    k.qty++;
+                }
+            });
+        } else {
+            master_contents.push({
+                id: x.id,
+                qty: 1
+            });
+        }
+    });
+
+    text_mesh.metadata = master_contents;
 
     scene.add(outer_line);
     scene.add(inner_line);
@@ -211,7 +235,7 @@ function createMasterObject(master) {
 
 function createUnitObject(item, pos) {
     const geometry = new THREE.BoxGeometry(item.width, item.length, item.depth);
-    
+
     geometry.translate(item.width / 2, item.length / 2, item.depth / 2);
     geometry.translate(
         pos.inner.x + item.x,
@@ -319,42 +343,7 @@ function render() {
                 INTERSECTED.material.color.setHex(0xff0000);
 
                 infoPanelEl.style.display = 'block';
-                infoPanelEl.innerHTML = `
-                    <div class="info-panel-container">
-                        <div class="info-panel-item">
-                            <div class="info-panel-item-title">
-                                <span>Ref</span>
-                            </div>
-                            <div class="info-panel-item-content">
-                                <span>${INTERSECTED.name}</span>
-                            </div>
-                        </div>
-                        <div class="info-panel-item">
-                            <div class="info-panel-item-title">
-                                <span>As specified (W × L × D)</span>
-                            </div>
-                            <div class="info-panel-item-content">
-                                <span>${INTERSECTED.metadata.item.width} × ${INTERSECTED.metadata.item.length} × ${INTERSECTED.metadata.item.depth} </span>
-                            </div>
-                        </div>
-                        <div class="info-panel-item">
-                            <div class="info-panel-item-title">
-                                <span>As packed (W × L × D)</span>
-                            </div>
-                            <div class="info-panel-item-content">
-                                <span>${INTERSECTED.metadata.width} × ${INTERSECTED.metadata.length} × ${INTERSECTED.metadata.depth} </span>
-                            </div>
-                        </div>
-                        <div class="info-panel-item">
-                            <div class="info-panel-item-title">
-                                <span>x, y, z</span>
-                            </div>
-                            <div class="info-panel-item-content">
-                                <span>${INTERSECTED.metadata.x}, ${INTERSECTED.metadata.y}, ${INTERSECTED.metadata.z}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                updateInfoPanelContent(INTERSECTED);
             }
         }
     } else {
@@ -366,7 +355,72 @@ function render() {
         INTERSECTED = null;
 
         infoPanelEl.style.display = 'none';
+        infoPanelEl.innerHTML = '';
     }
 
     renderer.render(scene, camera);
+}
+
+function updateInfoPanelContent(obj) {
+    if (obj.tooltipType === 'unit') {
+        infoPanelEl.innerHTML = `
+            <div class="info-panel-container">
+                <div class="info-panel-item">
+                    <div class="info-panel-item-title">
+                        <span>Ref</span>
+                    </div>
+                    <div class="info-panel-item-content">
+                        <span>${obj.metadata.id}</span>
+                    </div>
+                </div>
+                <div class="info-panel-item">
+                    <div class="info-panel-item-title">
+                        <span>As specified (W × L × D)</span>
+                    </div>
+                    <div class="info-panel-item-content">
+                        <span>${obj.metadata.item.width} × ${obj.metadata.item.length} × ${obj.metadata.item.depth} </span>
+                    </div>
+                </div>
+                <div class="info-panel-item">
+                    <div class="info-panel-item-title">
+                        <span>As packed (W × L × D)</span>
+                    </div>
+                    <div class="info-panel-item-content">
+                        <span>${obj.metadata.width} × ${obj.metadata.length} × ${obj.metadata.depth} </span>
+                    </div>
+                </div>
+                <div class="info-panel-item">
+                    <div class="info-panel-item-title">
+                        <span>x, y, z</span>
+                    </div>
+                    <div class="info-panel-item-content">
+                        <span>${obj.metadata.x}, ${obj.metadata.y}, ${obj.metadata.z}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else if (obj.tooltipType === 'master-signage') {
+
+        let itemList = ``;
+
+        obj.metadata.forEach(element => {
+            itemList += `
+                <div class="info-panel-item">
+                    <div class="info-panel-item-title">
+                        <span>${element.id}</span>
+                    </div>
+                    <div class="info-panel-item-content">
+                        <span>${element.qty}</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        infoPanelEl.innerHTML = `
+            <div class="info-panel-container">
+                ${itemList}
+            </div>
+        `;
+    }
+
 }
