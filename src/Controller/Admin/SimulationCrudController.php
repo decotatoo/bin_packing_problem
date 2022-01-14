@@ -43,14 +43,12 @@ class SimulationCrudController extends AbstractCrudController
             ->setFormTypeOption('class', Master::class)
             ->setFormTypeOption('multiple', true)
             ->setFormTypeOption('choice_label', 'ref')
-            ->addHtmlContentsToHead(sprintf('<script>const results = %s;</script>', json_encode($this->getContext()->getEntity()->getInstance()?->getResult())))
-            ;
+            ->addHtmlContentsToHead(sprintf('<script>const results = %s;</script>', json_encode($this->getContext()->getEntity()->getInstance()?->getResult())));
 
         yield CollectionField::new('simulationUnits', 'Units Ordered')
             ->hideOnIndex()
             ->setFormTypeOption('entry_type', SimulationUnitType::class)
             ->setEntryIsComplex(true);
-
     }
 
     public function updateEntity(EntityManagerInterface $entityManager, $entityInstance): void
@@ -111,12 +109,11 @@ class SimulationCrudController extends AbstractCrudController
             return $_pb;
         }, $packer->pack()->jsonSerialize());
 
-        $unpackedItems = $packer->getUnpackedItems();
+        $unpackedItems = $packer->getUnpackedItems()->getIterator();
 
         return [
             'packed' => $packed,
             'unpacked' => $unpackedItems,
         ];
     }
-
 }

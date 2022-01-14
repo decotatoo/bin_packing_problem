@@ -6,7 +6,7 @@
  */
 
 // any CSS you import will output into a single css file (app.css in this case)
-// import './styles/app.css';
+import './styles/app.css';
 
 
 // start the Stimulus application
@@ -19,17 +19,9 @@ const mainEl = document.getElementById('main');
 let elWidth = mainEl.clientWidth;
 let elHeight = window.innerHeight;
 
-
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls.js";
-
-let perspectiveCamera, orthographicCamera, controls, scene, renderer, stats;
-
-const params = {
-    orthographicCamera: false
-};
-
-const frustumSize = 400;
-
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 
 
 /**
@@ -38,6 +30,13 @@ const frustumSize = 400;
  * Z: depth.
  */
 
+let perspectiveCamera, orthographicCamera, controls, scene, renderer;
+
+const params = {
+    orthographicCamera: false
+};
+
+const frustumSize = 400;
 
 const aspect = elWidth / elHeight;
 
@@ -53,48 +52,9 @@ scene = new THREE.Scene();
 scene.background = new THREE.Color(0xcccccc);
 // scene.fog = new THREE.FogExp2(0xcccccc, 0.001);
 
-
-// 
-const packed = results.packed;
-
-let row_x = 0;
-
-console.log(packed);
-
-results.packed.forEach(packed => {
-
-    console.log(packed);
-
-    const master = packed.box;
-
-    const pos = createMasterObject(master);
-
-    const items = packed.items;
-
-    items.forEach((unit, index) => {
-        createUnitObject(unit, pos);
-    });
-
-
-    row_x += (master.outer_length + 100);
-});
-
 // lights
-
-// const dirLight1 = new THREE.DirectionalLight(0xffffff);
-// dirLight1.position.set(1, 1, 1);
-// scene.add(dirLight1);
-
-// const dirLight2 = new THREE.DirectionalLight(0x002288);
-// dirLight2.position.set(- 1, - 1, - 1);
-// scene.add(dirLight2);
-
-// const ambientLight = new THREE.AmbientLight(0x222222);
-// scene.add(ambientLight);
-
-const light = new THREE.AmbientLight(0xffffff); // soft white light
+const light = new THREE.AmbientLight(0xffffff);
 scene.add(light);
-
 
 // axis helper
 const axesHelper = new THREE.AxesHelper(5000);
@@ -105,57 +65,95 @@ const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let INTERSECTED;
 
+// font loader
+let font;
+const fontName = 'helvetiker';
+const fontWeight = 'regular';
+let isFontLoaded = false;
 
+const fontLoader = new FontLoader();
+fontLoader.load('https://threejs.org/examples/fonts/' + fontName + '_' + fontWeight + '.typeface.json', function (response) {
+    font = response;
+    isFontLoaded = true;
+});
+
+// add simulation results to scene
+const packed = results.packed;
+let master_row_x = 0;
+
+if (packed) {
+    await new Promise(resolve => {
+        let waitingForRender = setInterval(() => {
+            if (isFontLoaded) {
+                simulationResultVisualization();
+
+                clearInterval(waitingForRender);
+                resolve();
+            }
+        }, 100);
+    });
+}
 
 // renderer
 
 renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(elWidth, elHeight);
-// document.body.appendChild(renderer.domElement);
 
 const simulationWrapperEl = document.createElement('div');
-simulationWrapperEl.id = 'simulation-wrapper';
+simulationWrapperEl.id = 'visualization-wrapper';
 simulationWrapperEl.style.maxWidth = '100%';
 
+const infoPanelEl = document.createElement('div');
+infoPanelEl.id = 'visualization-info-panel';
+
+
+
+
 simulationWrapperEl.appendChild(renderer.domElement);
+simulationWrapperEl.appendChild(infoPanelEl);
 mainEl.after(simulationWrapperEl);
 
 window.addEventListener('resize', onWindowResize);
-
 window.addEventListener('mousemove', onMouseMove, false);
-
-
-
-
-
-
-
-
 
 createControls(perspectiveCamera);
 
 animate();
 
+function simulationResultVisualization() {
+    console.log(packed);
+
+    results.packed.forEach((packed, index) => {
+        const master = packed.box;
+        const pos = createMasterObject(master);
+        const items = packed.items;
+
+        items.forEach(unit => {
+            createUnitObject(unit, pos);
+        });
+
+        master_row_x += (master.outer_length + 100);
+    });
+}
 
 function createMasterObject(master) {
     const outer_trans_x = master.outer_width / 2;
     const outer_trans_y = master.outer_length / 2;
     const outer_trans_z = master.outer_depth / 2;
 
-    const inner_trans_x = row_x + ((master.outer_width - master.inner_width) / 2);
+    const inner_trans_x = master_row_x + ((master.outer_width - master.inner_width) / 2);
     const inner_trans_y = (master.outer_length - master.inner_length) / 2;
     const inner_trans_z = (master.outer_depth - master.inner_depth) / 2;
 
     // create outer box
     const outer_geometry = new THREE.BoxGeometry(master.outer_width, master.outer_length, master.outer_depth);
     outer_geometry.translate(outer_trans_x, outer_trans_y, outer_trans_z);
-    outer_geometry.translate(row_x, 0, 0);
+    outer_geometry.translate(master_row_x, 0, 0);
     const outer_edge = new THREE.EdgesGeometry(outer_geometry);
     const outer_line = new THREE.LineSegments(outer_edge, new THREE.LineBasicMaterial({ color: 0xffffff }));
     outer_line.updateMatrix();
     outer_line.matrixAutoUpdate = true;
-
 
     // create inner box
     const inner_geometry = new THREE.BoxGeometry(master.inner_width, master.inner_length, master.inner_depth);
@@ -166,8 +164,36 @@ function createMasterObject(master) {
     inner_line.updateMatrix();
     inner_line.matrixAutoUpdate = true;
 
+    // create masterbox signage
+    const text_geo = new TextGeometry(master.reference, {
+        font: font,
+        size: 30,
+        height: 1,
+        curveSegments: 4,
+        bevelThickness: 2,
+        bevelSize: 1,
+        bevelEnabled: true
+    });
+
+    text_geo.computeBoundingBox();
+    text_geo.translate(
+        master_row_x - (text_geo.boundingBox.max.x / 2) + outer_trans_x,
+        0,
+        master.outer_depth + 100
+    );
+
+    const text_material = new THREE.MeshPhongMaterial({ color: 0x1C78C0, specular: 0xffffff });
+    const text_mesh = new THREE.Mesh(text_geo, text_material);
+
+    text_mesh.castShadow = true;
+    text_mesh.receiveShadow = true;
+    
+    text_mesh.tooltip = true;
+    text_mesh.tooltipType = 'master';
+
     scene.add(outer_line);
     scene.add(inner_line);
+    scene.add(text_mesh);
 
     return {
         outer: {
@@ -185,13 +211,13 @@ function createMasterObject(master) {
 
 function createUnitObject(item, pos) {
     const geometry = new THREE.BoxGeometry(item.width, item.length, item.depth);
+    
     geometry.translate(item.width / 2, item.length / 2, item.depth / 2);
     geometry.translate(
         pos.inner.x + item.x,
         pos.inner.y + item.y,
         pos.inner.z + item.z
     );
-    // const material = new THREE.MeshBasicMaterial( {color: 0x00ff00} );
 
     const material = new THREE.MeshStandardMaterial({
         color: stringToColour(item.id),
@@ -200,8 +226,11 @@ function createUnitObject(item, pos) {
         transparent: true,
         opacity: 0.3
     });
+
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.name = item.id;
+    mesh.tooltip = true;
+    mesh.tooltipType = 'unit';
+    mesh.metadata = item;
 
     const edge = new THREE.EdgesGeometry(geometry);
     const line = new THREE.LineSegments(edge, new THREE.LineBasicMaterial({ color: 0xffffff }));
@@ -233,18 +262,10 @@ function createControls(camera) {
     controls.panSpeed = 0.8;
 
     controls.keys = ['KeyA', 'KeyS', 'KeyD'];
-
 }
 
-
 function onMouseMove(event) {
-
-    // calculate mouse position in normalized device coordinates
-    // (-1 to +1) for both components
-
-    // mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-    // mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-
+    // calculate mouse position in normalized device coordinates (-1 to +1) for both components
     mouse.x = ((((event.pageX - simulationWrapperEl.offsetLeft) / renderer.domElement.clientWidth) * 2) - 1);
     mouse.y = ((((event.pageY - simulationWrapperEl.offsetTop) / renderer.domElement.clientHeight) * -2) + 1);
 }
@@ -272,7 +293,6 @@ function animate() {
     controls.update();
 
     render();
-
 }
 
 function render() {
@@ -286,20 +306,55 @@ function render() {
 
     if (intersects.length > 0) {
         if (intersects[0].object != INTERSECTED) {
-            if (INTERSECTED) {
-                INTERSECTED.material.color.setHex(INTERSECTED.currentHex);
-            }
-            // store reference to closest object as current intersection object
-            INTERSECTED = intersects[0].object;
-            // store color of closest object (for later restoration)
-            INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
-            // set a new color for closest object
-            INTERSECTED.material.color.setHex(0xff0000);
+            // show information, if it has a "tooltip" property.
+            if (intersects[0].object.tooltip) {
+                if (INTERSECTED) {
+                    INTERSECTED.material.color.setHex(INTERSECTED.currentHex);
+                }
+                // store reference to closest object as current intersection object
+                INTERSECTED = intersects[0].object;
+                // store color of closest object (for later restoration)
+                INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
+                // set a new color for closest object
+                INTERSECTED.material.color.setHex(0xff0000);
 
-            // update text, if it has a "name" field.
-            if (intersects[0].object.name) {
-                let message = intersects[0].object.name;
-            } else {
+                infoPanelEl.style.display = 'block';
+                infoPanelEl.innerHTML = `
+                    <div class="info-panel-container">
+                        <div class="info-panel-item">
+                            <div class="info-panel-item-title">
+                                <span>Ref</span>
+                            </div>
+                            <div class="info-panel-item-content">
+                                <span>${INTERSECTED.name}</span>
+                            </div>
+                        </div>
+                        <div class="info-panel-item">
+                            <div class="info-panel-item-title">
+                                <span>As specified (W × L × D)</span>
+                            </div>
+                            <div class="info-panel-item-content">
+                                <span>${INTERSECTED.metadata.item.width} × ${INTERSECTED.metadata.item.length} × ${INTERSECTED.metadata.item.depth} </span>
+                            </div>
+                        </div>
+                        <div class="info-panel-item">
+                            <div class="info-panel-item-title">
+                                <span>As packed (W × L × D)</span>
+                            </div>
+                            <div class="info-panel-item-content">
+                                <span>${INTERSECTED.metadata.width} × ${INTERSECTED.metadata.length} × ${INTERSECTED.metadata.depth} </span>
+                            </div>
+                        </div>
+                        <div class="info-panel-item">
+                            <div class="info-panel-item-title">
+                                <span>x, y, z</span>
+                            </div>
+                            <div class="info-panel-item-content">
+                                <span>${INTERSECTED.metadata.x}, ${INTERSECTED.metadata.y}, ${INTERSECTED.metadata.z}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
             }
         }
     } else {
@@ -309,9 +364,9 @@ function render() {
         }
         // remove previous intersection object reference by setting current intersection object to "nothing"
         INTERSECTED = null;
+
+        infoPanelEl.style.display = 'none';
     }
-
-
 
     renderer.render(scene, camera);
 }
