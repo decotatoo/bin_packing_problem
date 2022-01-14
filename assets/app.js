@@ -128,7 +128,7 @@ function simulationResultVisualization() {
             createUnitObject(unit, pos);
         });
 
-        master_row_x += (packed.box.outer_length + 100);
+        master_row_x += (packed.box.outer_width + 100);
     });
 
     let unfit_items = [];
