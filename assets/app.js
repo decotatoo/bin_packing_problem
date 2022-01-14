@@ -3,6 +3,11 @@
  *
  * We recommend including the built version of this JavaScript file
  * (and its CSS file) in your base layout (base.html.twig).
+ * 
+ * 
+ * X: width
+ * Y: length
+ * Z: depth.
  */
 
 // any CSS you import will output into a single css file (app.css in this case)
@@ -11,24 +16,27 @@ import './styles/app.css';
 
 // start the Stimulus application
 import './bootstrap';
-
 import * as THREE from 'three';
-
-const mainEl = document.getElementById('main');
-
-let elWidth = mainEl.clientWidth;
-let elHeight = window.innerHeight;
-
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls.js";
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 
+const mainEl = document.getElementById('main');
 
-/**
- * X: width
- * Y: length
- * Z: depth.
- */
+const infoPanelEl = document.createElement('div');
+infoPanelEl.id = 'visualization-info-panel';
+
+const unfitItemsEl = document.createElement('div');
+unfitItemsEl.id = 'unfit-items';
+unfitItemsEl.className = 'col-md-2';
+
+let elWidth = mainEl.clientWidth;
+let elHeight = window.innerHeight;
+
+
+const simulationWrapperEl = document.createElement('div');
+simulationWrapperEl.id = 'visualization-wrapper';
+simulationWrapperEl.style.maxWidth = '100%';
 
 let perspectiveCamera, orthographicCamera, controls, scene, renderer;
 
@@ -78,10 +86,9 @@ fontLoader.load('https://threejs.org/examples/fonts/' + fontName + '_' + fontWei
 });
 
 // add simulation results to scene
-const packed = results.packed;
 let master_row_x = 0;
 
-if (packed) {
+if (results.packed) {
     await new Promise(resolve => {
         let waitingForRender = setInterval(() => {
             if (isFontLoaded) {
@@ -95,23 +102,14 @@ if (packed) {
 }
 
 // renderer
-
 renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(elWidth, elHeight);
 
-const simulationWrapperEl = document.createElement('div');
-simulationWrapperEl.id = 'visualization-wrapper';
-simulationWrapperEl.style.maxWidth = '100%';
-
-const infoPanelEl = document.createElement('div');
-infoPanelEl.id = 'visualization-info-panel';
-
-
-
 
 simulationWrapperEl.appendChild(renderer.domElement);
 simulationWrapperEl.appendChild(infoPanelEl);
+simulationWrapperEl.appendChild(unfitItemsEl);
 mainEl.after(simulationWrapperEl);
 
 window.addEventListener('resize', onWindowResize);
@@ -122,8 +120,6 @@ createControls(perspectiveCamera);
 animate();
 
 function simulationResultVisualization() {
-    console.log(packed);
-
     results.packed.forEach((packed, index) => {
         const pos = createMasterObject(packed);
         const items = packed.items;
@@ -134,6 +130,29 @@ function simulationResultVisualization() {
 
         master_row_x += (packed.box.outer_length + 100);
     });
+
+    let unfit_items = [];
+
+    results.unpacked.forEach((x) => {
+        if (
+            unfit_items.some(
+                (val) => val.id == x.description
+            )
+        ) {
+            unfit_items.forEach((k) => {
+                if (k.id === x.description) {
+                    k.qty++;
+                }
+            });
+        } else {
+            unfit_items.push({
+                id: x.description,
+                qty: 1
+            });
+        }
+    });
+
+    showUnfitItems(unfit_items);
 }
 
 function createMasterObject(item) {
@@ -401,10 +420,10 @@ function updateInfoPanelContent(obj) {
         `;
     } else if (obj.tooltipType === 'master-signage') {
 
-        let itemList = ``;
+        let itemListContent = ``;
 
         obj.metadata.forEach(element => {
-            itemList += `
+            itemListContent += `
                 <div class="info-panel-item">
                     <div class="info-panel-item-title">
                         <span>${element.id}</span>
@@ -418,9 +437,36 @@ function updateInfoPanelContent(obj) {
 
         infoPanelEl.innerHTML = `
             <div class="info-panel-container">
-                ${itemList}
+                ${itemListContent}
             </div>
         `;
     }
+
+}
+
+
+function showUnfitItems(item) {
+
+    let unfitItemsContent = ``;
+
+    item.forEach(element => {
+        unfitItemsContent += `
+            <div class="info-panel-item">
+                <div class="">
+                    <span>${element.id}</span>
+                </div>
+                <div class="">
+                    <span>${element.qty}</span>
+                </div>
+            </div>
+        `;
+    });
+
+    unfitItemsEl.innerHTML = `
+        <div class="form-group " style="padding-bottom:20px;">
+            <legend class="col-form-label">Units that doesn't fit in any Master</legend>
+            ${unfitItemsContent}
+        </div>
+    `;
 
 }
