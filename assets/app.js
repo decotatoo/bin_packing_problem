@@ -464,7 +464,7 @@ function showUnfitItems(item) {
 
     unfitItemsEl.innerHTML = `
         <div class="form-group " style="padding-bottom:20px;">
-            <legend class="col-form-label">Units that doesn't fit in any Master</legend>
+            <legend class="col-form-label">Units that doesn't fit in any Master Boxes</legend>
             ${unfitItemsContent}
         </div>
     `;
