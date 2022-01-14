@@ -17,7 +17,7 @@ import * as THREE from 'three';
 const mainEl = document.getElementById('main');
 
 let elWidth = mainEl.clientWidth;
-let elHeight = window.innerHeight; //mainEl.clientHeight;
+let elHeight = window.innerHeight;
 
 
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls.js";
@@ -29,6 +29,7 @@ const params = {
 };
 
 const frustumSize = 400;
+
 
 
 /**
@@ -80,20 +81,31 @@ results.packed.forEach(packed => {
 
 // lights
 
-const dirLight1 = new THREE.DirectionalLight(0xffffff);
-dirLight1.position.set(1, 1, 1);
-scene.add(dirLight1);
+// const dirLight1 = new THREE.DirectionalLight(0xffffff);
+// dirLight1.position.set(1, 1, 1);
+// scene.add(dirLight1);
 
-const dirLight2 = new THREE.DirectionalLight(0x002288);
-dirLight2.position.set(- 1, - 1, - 1);
-scene.add(dirLight2);
+// const dirLight2 = new THREE.DirectionalLight(0x002288);
+// dirLight2.position.set(- 1, - 1, - 1);
+// scene.add(dirLight2);
 
-const ambientLight = new THREE.AmbientLight(0x222222);
-scene.add(ambientLight);
+// const ambientLight = new THREE.AmbientLight(0x222222);
+// scene.add(ambientLight);
+
+const light = new THREE.AmbientLight(0xffffff); // soft white light
+scene.add(light);
+
 
 // axis helper
 const axesHelper = new THREE.AxesHelper(5000);
 scene.add(axesHelper);
+
+// raycaster
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let INTERSECTED;
+
+
 
 // renderer
 
@@ -111,13 +123,19 @@ mainEl.after(simulationWrapperEl);
 
 window.addEventListener('resize', onWindowResize);
 
+window.addEventListener('mousemove', onMouseMove, false);
+
+
+
+
+
+
+
+
+
 createControls(perspectiveCamera);
 
 animate();
-
-
-
-
 
 
 function createMasterObject(master) {
@@ -166,11 +184,6 @@ function createMasterObject(master) {
 }
 
 function createUnitObject(item, pos) {
-    /**
-     * X: width
-     * Y: length
-     * Z: depth.
-     */
     const geometry = new THREE.BoxGeometry(item.width, item.length, item.depth);
     geometry.translate(item.width / 2, item.length / 2, item.depth / 2);
     geometry.translate(
@@ -188,6 +201,7 @@ function createUnitObject(item, pos) {
         opacity: 0.3
     });
     const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = item.id;
 
     const edge = new THREE.EdgesGeometry(geometry);
     const line = new THREE.LineSegments(edge, new THREE.LineBasicMaterial({ color: 0xffffff }));
@@ -222,6 +236,19 @@ function createControls(camera) {
 
 }
 
+
+function onMouseMove(event) {
+
+    // calculate mouse position in normalized device coordinates
+    // (-1 to +1) for both components
+
+    // mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+    // mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+    mouse.x = ((((event.pageX - simulationWrapperEl.offsetLeft) / renderer.domElement.clientWidth) * 2) - 1);
+    mouse.y = ((((event.pageY - simulationWrapperEl.offsetTop) / renderer.domElement.clientHeight) * -2) + 1);
+}
+
 function onWindowResize() {
     const aspect = elWidth / elHeight;
 
@@ -249,9 +276,42 @@ function animate() {
 }
 
 function render() {
-
     const camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
 
-    renderer.render(scene, camera);
+    // update the picking ray with the camera and mouse position
+    raycaster.setFromCamera(mouse, camera);
 
+    // calculate objects intersecting the picking ray
+    const intersects = raycaster.intersectObjects(scene.children);
+
+    if (intersects.length > 0) {
+        if (intersects[0].object != INTERSECTED) {
+            if (INTERSECTED) {
+                INTERSECTED.material.color.setHex(INTERSECTED.currentHex);
+            }
+            // store reference to closest object as current intersection object
+            INTERSECTED = intersects[0].object;
+            // store color of closest object (for later restoration)
+            INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
+            // set a new color for closest object
+            INTERSECTED.material.color.setHex(0xff0000);
+
+            // update text, if it has a "name" field.
+            if (intersects[0].object.name) {
+                let message = intersects[0].object.name;
+            } else {
+            }
+        }
+    } else {
+        // restore previous intersection object (if it exists) to its original color
+        if (INTERSECTED) {
+            INTERSECTED.material.color.setHex(INTERSECTED.currentHex);
+        }
+        // remove previous intersection object reference by setting current intersection object to "nothing"
+        INTERSECTED = null;
+    }
+
+
+
+    renderer.render(scene, camera);
 }
