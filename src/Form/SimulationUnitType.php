@@ -18,7 +18,17 @@ class SimulationUnitType extends AbstractType
             ->add('qty')
             ->add('unit', EntityType::class, [
                 'class' => Unit::class,
-                'choice_label' => 'ref',
+                'choice_label' => function($choice, $key, $value) {
+                    return sprintf(
+                        '%s (%s) %d gram [%.2f × %.2f × %.2f cm]',
+                        $choice->getRef(),
+                        $choice->getName(),
+                        $choice->getWeight(),
+                        $choice->getW()/10,
+                        $choice->getL()/10,
+                        $choice->getH()/10
+                    );
+                },
             ]);
     }
 

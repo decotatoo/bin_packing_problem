@@ -42,7 +42,19 @@ class SimulationCrudController extends AbstractCrudController
             ->setFormType(EntityType::class)
             ->setFormTypeOption('class', Master::class)
             ->setFormTypeOption('multiple', true)
-            ->setFormTypeOption('choice_label', 'ref')
+            ->setFormTypeOption('choice_label', function($choice, $key, $value) {
+                return sprintf(
+                    '%s (%s) [Inner: %.2f × %.2f × %.2f cm] [Outer: %.2f × %.2f × %.2f cm]',
+                    $choice->getRef(),
+                    $choice->getName(),
+                    $choice->getInW()/10,
+                    $choice->getInL()/10,
+                    $choice->getInD()/10,
+                    $choice->getOutW()/10,
+                    $choice->getOutL()/10,
+                    $choice->getOutD()/10
+                );
+            })
             ->addHtmlContentsToHead(sprintf('<script>const results = %s;</script>', json_encode($this->getContext()->getEntity()->getInstance()?->getResult())));
 
         yield CollectionField::new('simulationUnits', 'Units Ordered')

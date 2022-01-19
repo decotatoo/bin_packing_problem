@@ -24,7 +24,7 @@ class Master
     #[ORM\Column(type: 'integer')]
     private $base_weight;
 
-    #[ORM\Column(type: 'integer', nullable: true)]
+    #[ORM\Column(type: 'integer')]
     private $max_weight;
 
     #[ORM\Column(type: 'integer')]

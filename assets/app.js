@@ -394,7 +394,7 @@ function updateInfoPanelContent(obj) {
                 </div>
                 <div class="info-panel-item">
                     <div class="info-panel-item-title">
-                        <span>As specified (W × L × D)</span>
+                        <span>As specified (mm) (W × L × D)</span>
                     </div>
                     <div class="info-panel-item-content">
                         <span>${obj.metadata.item.width} × ${obj.metadata.item.length} × ${obj.metadata.item.depth} </span>
@@ -402,7 +402,7 @@ function updateInfoPanelContent(obj) {
                 </div>
                 <div class="info-panel-item">
                     <div class="info-panel-item-title">
-                        <span>As packed (W × L × D)</span>
+                        <span>As packed (mm) (W × L × D)</span>
                     </div>
                     <div class="info-panel-item-content">
                         <span>${obj.metadata.width} × ${obj.metadata.length} × ${obj.metadata.depth} </span>
