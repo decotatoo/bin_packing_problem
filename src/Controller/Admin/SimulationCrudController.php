@@ -34,7 +34,7 @@ class SimulationCrudController extends AbstractCrudController
 
     public function configureFields(string $pageName): iterable
     {
-        yield TextField::new('name')
+        yield TextField::new('name', 'Session Name')
             ->addWebpackEncoreEntries('app');
 
         yield AssociationField::new('masters', 'Master Boxes')
