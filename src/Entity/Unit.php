@@ -30,9 +30,6 @@ class Unit
     #[ORM\Column(type: 'integer')]
     private $h;
 
-    #[ORM\Column(type: 'boolean', nullable: true)]
-    private $ice;
-
     #[ORM\OneToMany(mappedBy: 'unit', targetEntity: SimulationUnit::class, orphanRemoval: true)]
     private $simulationUnits;
 
@@ -106,18 +103,6 @@ class Unit
     public function setH(int $h): self
     {
         $this->h = $h;
-
-        return $this;
-    }
-
-    public function getIce(): ?bool
-    {
-        return $this->ice;
-    }
-
-    public function setIce(?bool $ice): self
-    {
-        $this->ice = $ice;
 
         return $this;
     }
