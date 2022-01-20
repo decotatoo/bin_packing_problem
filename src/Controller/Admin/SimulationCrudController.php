@@ -47,7 +47,7 @@ class SimulationCrudController extends AbstractCrudController
                     '%s (%s) %.2f kg [Inner: %.2f × %.2f × %.2f cm] [Outer: %.2f × %.2f × %.2f cm]',
                     $choice->getRef(),
                     $choice->getName(),
-                    $choice->getMaxWeight()/10^3,
+                    $choice->getMaxWeight()/1000,
                     $choice->getInW()/10,
                     $choice->getInL()/10,
                     $choice->getInD()/10,
