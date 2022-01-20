@@ -44,9 +44,10 @@ class SimulationCrudController extends AbstractCrudController
             ->setFormTypeOption('multiple', true)
             ->setFormTypeOption('choice_label', function($choice, $key, $value) {
                 return sprintf(
-                    '%s (%s) [Inner: %.2f × %.2f × %.2f cm] [Outer: %.2f × %.2f × %.2f cm]',
+                    '%s (%s) %.2f kg [Inner: %.2f × %.2f × %.2f cm] [Outer: %.2f × %.2f × %.2f cm]',
                     $choice->getRef(),
                     $choice->getName(),
+                    $choice->getMaxWeight()/10^3,
                     $choice->getInW()/10,
                     $choice->getInL()/10,
                     $choice->getInD()/10,
