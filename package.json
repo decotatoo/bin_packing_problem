@@ -16,6 +16,7 @@
         "build": "encore production --progress"
     },
     "dependencies": {
+        "string-to-color": "^2.2.2",
         "three": "^0.136.0"
     }
 }
